@@ -9,15 +9,15 @@
 
 ## About zealasm
 
-The goal of zealasm is to provide a way to assemble Z80 code directly in [Zeal 8-bit OS](https://github.com/Zeal8bit/Zeal-8-bit-OS), without the need of another computer.
+The goal of zealasm is to provide a way to assemble Z80 code directly in [Zeal 8-bit OS](https://github.com/Zeal8bit/Zeal-8-bit-OS), without the need for another computer.
 
 ## Features and limitations
 
 zealasm is still in alpha, here are the features implemented:
 
 * Less than **6KB** of code once compiled!
-* Use Zeal 8-bit OS API for file read and write, so completely portable
-* Support `ORG` to relocate final binary
+* Use Zeal 8-bit OS API for file reading and writing, so completely portable
+* Support `ORG` to relocate the final binary
 * Support a final binary up to 40KB
 * Support labels up to **16 characters**, forward usage before declaration supported
 * Support all official instructions from [Z80 User Manual](https://www.zilog.com/docs/z80/um0080.pdf)
@@ -67,7 +67,7 @@ make
 
 More info about compiling Zeal 8-bit OS [here](https://github.com/Zeal8bit/Zeal-8-bit-OS#getting-started).
 
-The resulted ROM image can then be provided to an emulator or directly flashed to the computer's ROM that will use it.
+The resulting ROM image can then be provided to an emulator or directly flashed to the computer's ROM that will use it.
 
 ## Usage
 
@@ -75,6 +75,8 @@ To assemble source file `source.asm` into `binary.bin`, use:
 ```
 zealasm.bin source.asm binary.bin
 ```
+
+An example program is provided below, in the section [Example program](#example-program).
 
 If you are using Zeal 8-bit OS default romdisk, you can use `exec` command to execute `zealasm.bin` or directly use `./`, followed by the source/destination file:
 ```
@@ -100,7 +102,7 @@ _start:
     ; Rest of the code
 label:
 ```
-* `.dm` to define a string in the final binary. Escape characters **are** supported. For example
+* `.dm` to define a string in the final binary. Escape characters **are** supported. For example:
 ```
     ld hl, my_str
     ; Rest of the code
@@ -128,9 +130,9 @@ my_str: .dm "Hello world, this is a message\n"
 ## 8-bit arithmetic and operands
 
 Despite the fact that the following instructions are described (in the official [Z80 User Manual](https://www.zilog.com/docs/z80/um0080.pdf)) as taking A as the first operand, `zealasm` will also accept that the second operand is given:
-* `add`. For example: both `add a, b` and `add b` will be accepted
-* `adc`. For example: both `adc a, b` and `adc b` will be accepted
-* `sbc`. For example: both `sbc a, b` and `sbc b` will be accepted
+* `add`. For example, both `add a, b` and `add b` will be accepted
+* `adc`. For example, both `adc a, b` and `adc b` will be accepted
+* `sbc`. For example, both `sbc a, b` and `sbc b` will be accepted
 
 The following instructions will **only** accept a **single** operand:
 * `sub`. For example, `sub b` is valid, but `sub a,b` isn't
@@ -144,13 +146,38 @@ The following instructions will **only** accept a **single** operand:
 As the `add`, `adc` and `sbc` instructions will refer to `A` if only a single operand is given, `HL` must be specified to refer to a 16-bit operation.
 For example, `add hl, bc` is a valid instruction, but `add bc` is **not**.
 
+## Example program
+
+The following example program prints "Hello, world!" and then exits. It can be assembled with `zealasm`, it shall then be run on Zeal 8-bit OS:
+```
+    ORG 0x4000
+
+    ; Load the message defined below
+    ld de, hello_msg
+    ld bc, 14
+    ; Standard output number
+    ld h, 0
+    ; Invoke WRITE syscall manually
+    ld l, 1
+    rst 8
+
+    ; Invoke EXIT syscall
+    ld l, 15
+    rst 8
+
+hello_msg:
+    .dm "Hello, world!\n"
+```
+
+As macros are not supported yet, invoking syscalls must be done manually with `rst 0x8` instruction, as described in Zeal 8-bit OS documentation.
+
 ## Contact
 
 For any suggestion or request, you can contact me at contact [at] zeal8bit [dot] com
 
 Or, you can join Zeal 8-bit projects [Discord server](https://discord.gg/UzEjwRvBBb).
 
-For features requests, you can also open an issue or a pull request.
+For feature requests, you can also open an issue or a pull request.
 
 ## Contributing
 
@@ -164,7 +191,7 @@ To contribute:
   * Open a Pull Request
 
 
-(*) A good commit message is as follow:
+(*) A good commit message is as follows:
 ```
 Module: add/fix/remove a from b
 
