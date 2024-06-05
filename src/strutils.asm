@@ -19,9 +19,9 @@ _strltrim_loop:
     inc hl
     ld a, (hl)
     cp ' '
-    jp z, _strnltrim_loop
+    jp z, _strltrim_loop
     cp '\t'
-    jp z, _strnltrim_loop
+    jp z, _strltrim_loop
     ret
 
 
