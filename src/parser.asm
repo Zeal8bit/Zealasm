@@ -6,7 +6,6 @@
     INCLUDE "zos_err.asm"
     INCLUDE "assembler_macros_h.asm"
 
-    EXTERN to_lower
 
     MACRO CHECK_LABEL_OR_CONSTANT _
         LOCAL is_label
@@ -19,7 +18,7 @@
 
     MACRO NEW_INSTRUCTION name, operand_count, instruction_code, routine
         DEFS 4, name          ; instruction name, maximum 4 chars
-        DEFB operand_count    ; operands count + 1
+        DEFB operand_count    ; operand count
         DEFW instruction_code ; instruction's first opcodes
         DEFW routine          ; routine to jump to
     ENDM
@@ -35,107 +34,58 @@
     ; Parameters:
     ;   HL - Line to parse, must be NULL-terminated
     ; Returns:
-    ;   B - Number of strings written
-    ; Alters:
-    ;   A, HL, DE, BC
+    ;   B - Number of string written
 parser_split_line:
-    DEFC INSTR_START = 0
-    DEFC INSTR_STOP  = 1
-    DEFC OP1_START   = 2
-    DEFC OP1_STOP    = 3
-    DEFC COMMA_START = 4
-    DEFC COMMA_END   = 5    ; unsued, keep `stop` odd
-    DEFC OP2_START   = 6
-    DEFC OP2_STOP    = 7
-    DEFC ST_END      = 8
-
-    ; C is the state of the machine
-    ld c, INSTR_START
-    ; Number of strings written
-    ld b, 0
-    ex de, hl
-    ; Simplify the operand storing
-    ld hl, _assemble_instr_str
-    ; Let the branches decide whether to manually inc DE or not
-    dec de
-_parser_split_line_loop_inc:
-    inc de
-_parser_split_line_loop:
-    ld a, (de)
+    ; Remove the comment if there is any
+    ld a, ';'
+    call strsep
+    ; Check if there is a label defined
+    call parser_label_defined
+    ; Return right now in case of an error
+    ld a, b
     or a
-    jr z, _parser_split_line_end_of_line
-    cp ' '
-    jr z, _parser_split_line_whitespace
-    cp '\t'
-    jr z, _parser_split_line_whitespace
-    cp ','
-    jr z, _parser_split_line_comma
-    cp '\n'
-    jr z, _parser_split_line_end_of_line
-    cp ';'
-    jr z, _parser_split_line_end_of_line
-    ; Non special character, part of the instruction or operands, convert to lower case
-    call to_lower
-    ld (de), a
-    ; Make sure we are not waiting for the end of the line, nor for a comma
-    ld a, c
-    cp ST_END
-    jr z, _parser_split_line_syntax_error
-    cp COMMA_START
-    jr z, _parser_split_line_syntax_error
-    ; If we are still looking for the end of the instruction or operand, we can continue the loop right away
-    rrca    ; All the `stop` are odd
-    jp c, _parser_split_line_loop_inc
-    ; Start state
-    ; Store the operand else
-    ld (hl), e
-    inc hl
-    ld (hl), d
-    inc hl
-    ; Increment the number of operands written
+    ret nz
+
+    call strltrim
+    ; Prepare the return value
+    ld b, 0
+    ; Check if we still have some characters in the string
+    ld a, (hl)
+    or a
+    ret z
+    ; Check if it is a directive
+    cp '.'
+    jp z, parse_directive_split_line
+    call strtolower
+    ; Separate the instruction into maximum 3 parts: INS R,R'
+    ld a, ' '
+    call strsep
+    ; Save the current operand
+    ld (_assemble_instr_str), hl
+    ; If A is not 0, then the delimiter was not found
     inc b
-    ; Go to the next state
-    inc c
-    jp _parser_split_line_loop_inc
-
-_parser_split_line_whitespace:
-    ; If we are currently looking for the `stop` of a word, we have to replace the whitespace with a 0
-    ; Else, we can just continue the loop
-    ld a, c
-    rrca    ; All the `stops` are odd
-    jp nc, _parser_split_line_loop_inc
-    ; We were looking for the end of a word, replace with a 0
-    xor a
-    ld (de), a
-    ; Increment the state of the machine
-    inc c
-    jp _parser_split_line_loop_inc
-
-_parser_split_line_comma:
-    ; Only accept the comma if we are actually looking for one or for the end of OP1_STOP
-    ld a, c
-    cp OP1_STOP
-    jr z, _parser_split_line_comma_valid_op1
-    cp COMMA_START
-    jr z, _parser_split_line_comma_valid
-_parser_split_line_syntax_error:
-    ld b, ASSEMBLE_SYNTAX_ERROR
-    ret
-
-_parser_split_line_comma_valid_op1:
-    inc c
-_parser_split_line_comma_valid:
-    ; We were looking for a comma, replace it with 0 and increment the state twice! (to skip the `stop` state)
-    xor a
-    ld (de), a
-    inc c
-    inc c
-    jp _parser_split_line_loop_inc
-
-_parser_split_line_end_of_line:
-    ; Replace the last character with a 0, in case the last character was part of an operand
-    xor a
-    ld (de), a
+    or a
+    ret nz
+    ; Look for the first operand
+    ex de, hl   ; Put the next string into HL
+    call strltrim   ; Trim it and cut where ',' is
+    ld a, ','
+    call strsep
+    ; Save the second operand
+    ld (_assemble_reg1_str), hl
+    ; If A is not 0, then the delimiter was not found
+    or a
+    jr nz, _assemble_one_operand
+    ; Trim the last operand
+    ex de, hl
+    call strltrim
+    call strrtrim
+    ld (_assemble_reg2_str), hl
+_assemble_two_operand:
+    inc b
+_assemble_one_operand:
+    inc b
+_assemble_no_operand:
     ret
 
 
@@ -1934,7 +1884,6 @@ _assemble_instr_rlca:
 _assemble_instr_rra:
 _assemble_instr_rrca:
 _assemble_instr_scf:
-_assemble_instr_sysc:
     ret
 
 
@@ -2425,8 +2374,6 @@ _assemble_instructions_s:
     NEW_INSTRUCTION("sra",  2,    0x0000, _assemble_instr_sra)
     NEW_INSTRUCTION("srl",  2,    0x0000, _assemble_instr_srl)
     NEW_INSTRUCTION("sub",  2,    0x0000, _assemble_instr_sub)
-    ; Pseudo-instruction for Zeal 8-bit OS `syscall`
-    NEW_INSTRUCTION("sysc", 1,    0x00cf, _assemble_instr_sysc)
 _assemble_instructions_x:
     NEW_INSTRUCTION("xor",  2,    0x0000, _assemble_instr_xor)
     DEFB 'z'    ; must be > than word "xor"
