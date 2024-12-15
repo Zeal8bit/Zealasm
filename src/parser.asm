@@ -39,6 +39,8 @@ parser_split_line:
     ; Remove the comment if there is any
     ld a, ';'
     call strsep
+    call strltrim
+    call strrtrim
     ; Check if there is a label defined
     call parser_label_defined
     ; Return right now in case of an error
@@ -1884,6 +1886,7 @@ _assemble_instr_rlca:
 _assemble_instr_rra:
 _assemble_instr_rrca:
 _assemble_instr_scf:
+_assemble_instr_sysc:
     ret
 
 
@@ -2374,6 +2377,8 @@ _assemble_instructions_s:
     NEW_INSTRUCTION("sra",  2,    0x0000, _assemble_instr_sra)
     NEW_INSTRUCTION("srl",  2,    0x0000, _assemble_instr_srl)
     NEW_INSTRUCTION("sub",  2,    0x0000, _assemble_instr_sub)
+    ; Pseudo-instruction for Zeal 8-bit OS `syscall`
+    NEW_INSTRUCTION("sysc", 1,    0x00cf, _assemble_instr_sysc)
 _assemble_instructions_x:
     NEW_INSTRUCTION("xor",  2,    0x0000, _assemble_instr_xor)
     DEFB 'z'    ; must be > than word "xor"
