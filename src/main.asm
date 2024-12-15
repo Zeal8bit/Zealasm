@@ -89,7 +89,10 @@ _error_ret_exit:
     pop de
 _error_exit:
     S_WRITE3(DEV_STDOUT, error_str, error_str_end - error_str)
+    ; Parameters:
+    ;   A - Exit code
 _exit:
+    ld h, a
     EXIT()
 
 _version_usage:
