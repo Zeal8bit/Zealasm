@@ -309,9 +309,14 @@ data_list_allocate_entry:
     ld (hl), e
     inc hl
     ld (hl), d
-    ; Success, we can return the newly allocated pointer
-    pop de
+    ; Clear the "next" entry
     xor a
+    inc hl
+    ld (hl), a
+    inc hl
+    ld (hl), a
+    ; Success, we can return the newly allocated pointer, A is already 0
+    pop de
     ret
 _data_list_allocate_entry_no_mem:
     pop hl
