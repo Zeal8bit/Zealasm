@@ -150,7 +150,12 @@ _file_read_next_char_reload:
     READ()
     ; Check if any error occurred
     or a
-    ret nz
+    jr z,_file_read_next_char_check_eof
+    ; An error occurred, return it
+    pop bc
+    pop de
+    ret
+_file_read_next_char_check_eof:
     ; If no byte was read from the file, return ERR_NO_MORE_ENTRIES
     ASSERT(LINE_BUFFER_LENGTH < 256)
     or c
