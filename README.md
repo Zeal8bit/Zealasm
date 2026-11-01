@@ -33,35 +33,35 @@ Regarding the current limitations:
 
 ## Building the project
 
-### Requirements
+The recommended build environment is [Zeal Development Environment (ZDE)](https://github.com/Zeal8bit/zeal-dev-environment), which provides the Zeal CMake toolchain and z88dk tools. From the project directory, run:
 
-At the moment, the project has only been assembled on Linux (Ubuntu 20.04 and 22.04), it should be compatible with Mac OS and Windows as long as you have:
-
-* bash
-* git (to clone this repo)
-* make
-* Zeal 8-bit OS source code. Only the `kernel_headers` directory is required
-* z88dk v2.2 (or later). Only its assembler, `z80asm`, is strictly required. The latest version of `z80asm` must be used as earlier versions don't have support for `MACRO`.
-
-To install z88dk, please [check out their Github project](https://github.com/z88dk/z88dk).
-
-### Building
-
-To build the program, define the path to Zeal 8-bit OS, this will let us find the header files used to assemble `zealasm`:
+```sh
+zde cmake
 ```
+
+### Manual build
+
+For a native build, install:
+
+* Git
+* CMake 3.16 or later and a supported build tool, such as Make or Ninja
+* A current Zeal 8-bit OS source checkout, including its CMake toolchain and SDK
+* z88dk v2.2 or later, including `z88dk-z80asm` with support for `MACRO`. See the [z88dk project](https://github.com/z88dk/z88dk) for installation instructions.
+
+Set the path to Zeal 8-bit OS, then configure and build:
+
+```sh
 export ZOS_PATH=/your/path/to/Zeal8bitOS
-```
-Then simply use the command:
-```
-make
+cmake -S . -B build
+cmake --build build
 ```
 
-After compiling, the folder `bin/` should contain the binary `zealasm.bin`. This file can be then loaded to Zeal 8-bit OS through UART thanks to the `load` command.
+After compiling, the folder `build/` contains the binary `zealasm.bin` and its map file. This file can be then loaded to Zeal 8-bit OS through UART thanks to the `load` command.
 
 The binary can also be embedded within the `romdisk` that will contain both the OS and a read-only file system. For example:
 ```
 cd $ZOS_PATH
-export EXTRA_ROMDISK_FILES="/path/to/zealasm/bin/zealasm.bin"
+export EXTRA_ROMDISK_FILES="/path/to/zealasm/build/zealasm.bin"
 make
 ```
 
